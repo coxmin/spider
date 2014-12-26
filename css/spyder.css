@@ -1,0 +1,144 @@
+@font-face {
+    font-family: 'fnt';
+    src: url('../res/LiberationSerif-Regular.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
+#board, .card {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+#board {
+    position: relative;
+    margin-top: 5px;
+    width: 100%;
+    height: 10em;
+    box-shadow: 0 0 1px #03a;
+    border-radius: .2em;
+}
+
+.over {
+    box-shadow: 0 0 8px 2px #f00;
+}
+
+.overok {
+    box-shadow: 0 0 8px 4px #08f;
+}
+
+.card {
+    font-family: fnt;
+    position: absolute;
+    left: 1em;
+    top: 1em;
+    width: 5em;
+    height: 7em;
+    font-size: 1em;
+    background: #fff;
+    background: linear-gradient(90deg, #d8e2ec 0%, #fff 50%, #d8e2ec 100%);
+    border-radius: .25em;
+    border: 1px solid #282e3c;
+    text-align: center;
+    overflow: hidden;
+    /*box-shadow: 0 0 .4em rgba(0, 0, 0, .1);*/
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    cursor: pointer;
+}
+
+.card i {
+    font-style: normal;
+    font-size: 4em;
+    line-height: 1.5em;
+}
+
+.vtop, .vbott {
+    width: 1em;
+    text-align: center;
+    display: inline-block;
+    box-sizing: border-box;
+    position: absolute;
+    font-size: 1.2em;
+    padding: 0;
+    margin: 0;
+}
+
+.vtop {
+    top: 0;
+    left: 0;
+}
+
+.vbott {
+    bottom: 0;
+    right: 0;
+    transform: rotate(180deg);
+}
+
+.card.ngr, .card.trf {
+    color: #000;
+}
+
+.card.rom, .card.ros {
+    color: #d00;
+}
+
+.card.ngr:before, .card.trf:before, .card.rom:before, .card.ros:before {
+    position: absolute;
+    left: 0;
+    top: .8em;
+    width: 1em;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.card.ngr:after, .card.trf:after, .card.rom:after, .card.ros:after {
+    position: absolute;
+    right: 0;
+    bottom: .8em;
+    transform: rotate(180deg);
+    width: 1em;
+    font-size: 1.2em;
+    text-align: center;
+}
+
+.card.ngr:before, .card.ngr:after {
+    content: '\2660';
+}
+
+.card.trf:before, .card.trf:after {
+    content: '\2663';
+}
+
+.card.rom:before, .card.rom:after {
+    content: '\2666';
+}
+
+.card.ros:before, .card.ros:after {
+    content: '\2665';
+}
+
+.cover {
+    position: absolute;
+    display: block;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+.down {
+    background: linear-gradient(120deg, #38f, #048, #024, #048, #38f) !important;
+}
+
+.rot {
+    transform: rotate(180deg);
+}
+
+
