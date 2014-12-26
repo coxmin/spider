@@ -45,9 +45,9 @@ function Play() {
     arguments.callee.__inst = this;
 
     var i;
-    this.ch = new Array();
+    this.ch = [];
     for (i = 0; i < 10; i++) {
-        this.ch[i] = new Array();
+        this.ch[i] = [];
         this.ch[i]['channel'] = new Audio();
         this.ch[i]['end'] = -1;
     }
@@ -72,6 +72,41 @@ Play.prototype.mute = function () {
 };
 var player = new Play();
 //-------------------------------------------------
+
+function Arr() {
+    var arr = [];
+    arr.push.apply(arr, arguments);
+    Object.defineProperty(arr, 'last', {
+        get: function () {
+            return arr[arr.length - 1];
+        },
+        set: function (val) {
+            arr[arr.length - 1] = val;
+        },
+        enumerable: false,
+        configurable: true
+    });
+    arr.shuffle = function () {
+        var t = this.splice(0);
+        var l = t.length;
+        for (var i = 0; i < l; i++) {
+            this.push(t.splice(Math.floor(Math.random() * t.length), 1)[0]);
+        }
+    };
+    arr.find_id = function (ix) {
+        for (var i = 0; i < this.length; i++) {
+            if (this[i].id === ix) {
+                return this[i];
+                //return [this[i],i];
+            }
+        }
+    };
+    arr.add = function (x) {
+        this.push(x);
+    };
+
+    return arr;
+}
 
 function Sett() {
     if (arguments.callee.__inst) {
@@ -118,45 +153,8 @@ var vals = {
     12: 'Q',
     13: 'K'
 };
-//__________STIVA__________________________________________________
-function Stiva() {
-    this.sac = [];
-}
-
-Stiva.prototype.add = function (x) {
-    this.sac.push(x);
-};
-
-Stiva.prototype.insert = function (pos, x) {
-    var t = this.sac.splice(pos);
-    this.sac.push(x);
-    this.sac = this.sac.concat(t);
-};
-
-Stiva.prototype.len = function () {
-    return this.sac.length;
-};
-Stiva.prototype.find_id = function (ix) {
-    for (var i = 0; i < this.sac.length; i++) {
-        if (this.sac[i].id === ix) {
-            return this.sac[i];
-        }
-    }
-};
-Stiva.prototype.shuffle = function () {
-    var arr = this.sac;
-    this.sac = [];
-    var l = arr.length;
-    for (var i = 0; i < l; i++) {
-        this.sac.push(arr.splice(Math.floor(Math.random() * arr.length), 1)[0]);
-    }
-};
 
 //_______________________________________
-
-function last(arr) {
-    return arr[arr.length - 1];
-}
 
 //________________SPYDER_STOCK________________________________________
 
@@ -168,14 +166,9 @@ function msg(txt) {
 
 function Board() {
     this.body = document.getElementById('board');
-    this.stock = new Stiva();
+    this.stock = Arr();
     this.scor = document.getElementById('scor');
     this.nomv = 0;
-    this.etalon = new Card(2, 'rom');
-    this.etalon.x = -1000;
-    this.body.appendChild(this.etalon.body);
-    this.etalon.show();
-    this.ebody = this.etalon.body;
 
     this.aclick = document.getElementById('clck');
     this.aclick2 = document.getElementById('clck2');
@@ -185,6 +178,12 @@ function Board() {
 
     this.tout = null;
     this.tcount = 0;
+
+    var etalon = new Card(2, 'rom');
+    etalon.x = -1000;
+    this.body.appendChild(etalon.body);
+    etalon.show();
+
     this.win_wh = {
         w: window.innerWidth,
         h: window.innerHeight
@@ -192,8 +191,12 @@ function Board() {
     this.body.style.height = (this.win_wh.h - 20) + 'px';
     this.wh = {
         w: this.body.offsetWidth,
-        h: this.body.offsetHeight
+        h: this.body.offsetHeight,
+        ew: etalon.body.offsetWidth,
+        eh: etalon.body.offsetHeight
     };
+    etalon.body.remove();
+    delete etalon;
     this.move = {
         x: 0,
         y: 0,
@@ -202,77 +205,72 @@ function Board() {
         obj: null
     };
     this.MOVE = false;
-    this.xsz = this.wh.w / 10 / 5;
-    this.body.style.fontSize = (this.xsz - 1) + 'px';
+    this.body.style.fontSize = (this.wh.w / 10 / 5 - 1) + 'px';
 
     this.gen_spyder_suit();
     this.lay();
     this.set_evt();
 }
+
 Board.prototype.gen_spyder_suit = function () {
-    var crd, self = this;
+    var crd, self = this, i;
     for (var v in vals) {
-        for (var i = 0; i < 8; i++) {
+        for (i = 0; i < 8; i++) {
             crd = new Card(parseInt(v), 'ngr');
-            this.stock.add(crd);
+            this.body.appendChild(crd.body);
+            this.stock.push(crd);
         }
     }
     this.stock.shuffle();
-    this.stock.sac.forEach(function (val, ix) {
-        val.zix(ix);
-        self.body.appendChild(val.body);
-    });
 };
+
 Board.prototype.lay = function () {
-    var i, pos, k, crd, sp, w;
-    this.slots = [];
+    var i, pos, k, crd, sp;
+    this.slots = Arr();
     this.pos = [];
 
     k = 0;
-    w = this.ebody.offsetWidth;
 
-    sp = (this.wh.w - w) / 9;
+    sp = (this.wh.w - this.wh.ew) / 9;
     for (i = 0; i < 10; i++) {
         pos = k++ * sp;
         this.pos.push(pos);
-        this.slots.push([]);
+        this.slots.push(Arr());
     }
-    this.slots.push([]);//[10]restul de cărți
-    this.slots.push([]);//[11] cărțile luate de pe masă
-    k = 0;
+    this.slots.push(Arr());//[10]restul de cărți
+    this.slots.push(Arr());//[11] cărțile luate de pe masă
+
     for (i = 0; i < 54; i++) {
-        crd = this.stock.sac[i];
+        crd = this.stock[i];
         crd.slot = i % 10;
-        crd.pos(this.pos[i % 10], Math.floor(i / 10) * 5);
+        crd.xy(this.pos[i % 10], Math.floor(i / 10) * 5, i);
         this.slots[i % 10].push(crd);
         if (i > 43)crd.up();
     }
     k = -10;
-    for (i = 54; i < this.stock.len(); i++) {
+    for (i = 54; i < this.stock.length; i++) {
         if ((i - 54) % 10 === 0)k += 10;
-        crd = this.stock.sac[i];
+        crd = this.stock[i];
         crd.slot = 10;
         this.slots[10].push(crd);
-        crd.pos(this.wh.w - w - k, this.wh.h - this.ebody.offsetHeight);
+        crd.xy(this.wh.w - this.wh.ew - k, this.wh.h - this.wh.eh, i);
     }
     msg('Start');
 };
 
 Board.prototype.lay_even = function (pos, old) {
-    var i, arr = this.slots[pos], k = 0, z = 0;
+    var i, k = 0, z = 0;
     var self = this;
-    var x = this.pos[pos];
-    for (i = 0; i < arr.length; i++) {
-        arr[i].x = x;
-        arr[i].y = k;
-
-        $(arr[i].body).animate({left: x + 'px', top: k + 'px'}, 400, function () {
-            this.style.zIndex = ++z;
-            if (old && self.slots[old].length) last(self.slots[old]).up();
-        });
-        k += (arr[i].down) ? 5 : 30;
+    for (i = 0; i < this.slots[pos].length; i++) {
+        this.slots[pos][i].x = this.pos[pos];
+        this.slots[pos][i].y = k;
+        this.slots[pos][i].body.style.zIndex = ++z;
+        $(this.slots[pos][i].body).animate({left: this.pos[pos] + 'px', top: k + 'px'}, 200);
+        k += (this.slots[pos][i].down) ? 5 : 30;
     }
+    if (old)this.slots[old].last.up();
 };
+
 Board.prototype.is_suit = function (arr) {
     var i;
     if (arr[arr.length - 1].down)return false;
@@ -281,14 +279,24 @@ Board.prototype.is_suit = function (arr) {
             return false;
         }
     }
-
     return true;
 };
+
+Board.prototype.is_suit_slot = function (slot, pos) {
+    var i;
+    if (this.slots[slot].last.down)return false;
+    for (i = pos; i < this.slots[slot].length - 1; i++) {
+        if (this.slots[slot][i].val - this.slots[slot][i + 1].val != 1 || this.slots[slot][i].down) {
+            return false;
+        }
+    }
+    return true;
+};
+
 Board.prototype.end_suit = function (pos) {
     var i, k = 0;
-    var arr = this.slots[pos];
-    for (i = arr.length - 1; i > 0; i--) {
-        if (arr[i - 1].val - arr[i].val === 1) {
+    for (i = this.slots[pos].length - 1; i > 0; i--) {
+        if (this.slots[pos][i - 1].val - this.slots[pos][i].val === 1) {
             k++;
         } else {
             return k;
@@ -299,65 +307,56 @@ Board.prototype.end_suit = function (pos) {
 
 Board.prototype.check = function (slot) {
     if (this.slots[slot].length < 13)return -1;
-    var i, crd, k = null, slice;
-    var arr = this.slots[slot];
-    for (i = arr.length - 1; i > -1; i--) {
-        if (arr[i].val === 13) {
-            slice = arr.slice(i);
-            if (this.is_suit(slice) && slice.length === 13) {
-                k = i;
-            }
-        }
+    var i, crd, k = null;
+
+    if (!this.is_suit_slot(slot, this.slots[slot].length - 13))return;
+
+    player.play(this.adown);
+    var x = this.slots[11].length / 13 * 10;
+    for (i = this.slots[slot].length - 13; i < this.slots[slot].length; i++) {
+        crd = this.slots[slot][i];
+        crd.pos(x, this.wh.h - this.wh.eh);
+        crd.zix(x);
+        crd.slot = 11;
+        this.slots[11].push(crd);
     }
-    if (k != null) {
-        player.play(this.adown);
-        var x = this.slots[11].length / 13 * 10;
-        for (i = 0; i < 13; i++) {
-            crd = this.slots[slot][i + k];
-            crd.pos(x, this.wh.h - this.ebody.offsetHeight);
-            crd.zix(x);
-            crd.slot = 11;
-            this.slots[11].push(crd);
-        }
-        this.slots[slot] = this.slots[slot].splice(0, k);
-        if (this.slots[slot].length) {
-            last(this.slots[slot]).up();
-        }
-        k = 0;
-        for (i = 0; i < 10; i++) {
-            k += this.slots[i].length;
-        }
-        if (k === 0) {
-            player.play(document.getElementById('awin'));
-            msg('<h1>Win!</h1>');
-        }
+    this.slots[slot].splice(this.slots[slot].length - 13);
+    if (this.slots[slot].length) this.slots[slot].last.up();
+
+    for (i = 0; i < 10; i++) {
+        if (this.slots[i].length) return;
     }
+    player.play(document.getElementById('awin'));
+    msg('<h1>Win!</h1>');
 };
+
 Board.prototype.inc_mv = function () {
     this.scor.innerHTML = 'Mutări: ' + ++this.nomv;
 };
 Board.prototype.check_slot = function () {
     var crd = this.move.obj;
-    var x = crd.x, pos, oldslot;
+    var x = crd.x, pos, oldslot, i;
     var m = this.pos.map(function (arg) {
         return Math.abs(x - arg);
     });
     pos = m.indexOf(Math.min.apply(null, m));
 
-    for (var i = 0; i < 10; i++) {
-        last(this.slots[i]).body.classList.remove('over');
-        last(this.slots[i]).body.classList.remove('overok');
+    for (i = 0; i < 10; i++) {
+        if (this.slots[i].length) {
+            this.slots[i].last.body.classList.remove('over');
+            this.slots[i].last.body.classList.remove('overok');
+        }
     }
 
-    if (this.slots[pos].length === 0 || last(this.slots[pos]).val - crd.val === 1) {
+    if (this.slots[pos].length === 0 || this.slots[pos].last.val - crd.val === 1) {
         oldslot = crd.slot;
-        for (var i = 0; i < this.move.suit.length; i++) {
+        for (i = 0; i < this.move.suit.length; i++) {
             this.slots[oldslot].pop();
             this.move.suit[i].slot = pos;
             this.slots[pos].push(this.move.suit[i]);
         }
         this.lay_even(pos);
-        if (this.slots[oldslot].length)last(this.slots[oldslot]).up();
+        if (this.slots[oldslot].length) this.slots[oldslot].last.up();
         this.check(crd.slot);
         this.inc_mv();
         player.play(this.aclick2);
@@ -377,22 +376,24 @@ Board.prototype.mv = function (x, y) {
     m = Math.abs(xx - this.pos[0]);
     var p = 0;
     for (i = 0; i < 10; i++) {
-        last(this.slots[i]).body.classList.remove('over');
+        if (this.slots[i].length)this.slots[i].last.body.classList.remove('over');
         v = Math.abs(xx - this.pos[i]);
         if (v < m) {
             m = v;
             p = i
         }
     }
-    var l = this.slots[p][this.slots[p].length - 1];
-    if (l.val - this.move.obj.val === 1) {
-        l.body.className += ' overok';
-    } else {
-        l.body.className += ' over';
+    if (this.slots[p].length) {
+        var l = this.slots[p].last;
+        if (l.val - this.move.obj.val === 1) {
+            l.body.className += ' overok';
+        } else {
+            l.body.className += ' over';
+        }
     }
 };
 
-Board.prototype.qmove = function (x, y) {
+Board.prototype.qmove = function () {
     var self = this;
     var crd;
     clearTimeout(this.tout);
@@ -422,7 +423,7 @@ Board.prototype.qmove = function (x, y) {
 };
 Board.prototype.deal_new = function () {
     var self = this;
-    var i, crd;
+    var i;
     if (this.slots[10].length < 10) {
         msg("<h2>ERR stiva rezerva</h2>");
     }
@@ -467,7 +468,7 @@ Board.prototype.find_place = function (c) {
             slice[i].slot = empty;
             this.slots[empty].push(slice[i]);
         }
-        if (this.slots[oldslot].length > 0) last(this.slots[oldslot]).up();
+        if (this.slots[oldslot].length > 0) this.slots[oldslot].last.up();
         this.lay_even(empty);
         this.inc_mv();
         return;
@@ -484,7 +485,7 @@ Board.prototype.find_place = function (c) {
         slice[i].zix(100 + i);
         this.slots[max].push(slice[i]);
     }
-    if (this.slots[oldslot].length > 0) last(this.slots[oldslot]).up();
+    if (this.slots[oldslot].length > 0) this.slots[oldslot].last.up();
     this.lay_even(max);
     player.play(this.aclick2);
     this.check(max);
@@ -623,13 +624,7 @@ Card.prototype.pos = function (x, y, d) {
     this.y = (y == null) ? this.y : y;
     $(this.body).stop().animate({left: this.x + 'px', top: this.y + 'px'}, d || 300);
 };
-Card.prototype.poscb = function (x, y, d, cb, arg) {
-    this.x = x;
-    this.y = (y == null) ? this.y : y;
-    $(this.body).stop().animate({left: this.x + 'px', top: this.y + 'px'}, d || 300, function () {
-        cb.lay_even(arg);
-    });
-};
+
 Card.prototype.zix = function (z) {
     this.z = z;
     this.body.style.zIndex = z;
