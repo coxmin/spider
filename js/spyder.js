@@ -79,6 +79,7 @@ function Sett() {
     }
     arguments.callee.__inst = this;
 }
+
 Sett.prototype.init = function () {
     this.nextID = 0;
 };
