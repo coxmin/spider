@@ -123,7 +123,7 @@ function msg(txt) {
 //__________________CARD_______________________________________________
 
 function gen_card(val, col) {
-    var e, i, id;
+    var e, i;
     e = document.createElement('div');
     e.className = 'card ' + col;
 
@@ -454,7 +454,7 @@ Board.prototype.set_evt = function () {
         self.MOVE = false;
         var m, v;
         //var crd = this.move.obj;
-        var x = self.move.suit[0].x, pos = 0, oldslot, i;
+        var x = self.move.suit[0].x, pos = 0, i;
         m = self.body.offsetWidth;
         for (i = 0; i < 10; i++) {
             if (i === self.move.slot) continue;
