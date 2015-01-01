@@ -54,40 +54,24 @@ Play.prototype.mute = function () {
 var player = new Play();
 //-------------------------------------------------
 
-function Arr() {
-    var arr = [];
-    arr.push.apply(arr, arguments);
-    Object.defineProperty(arr, 'last', {
-        get: function () {
-            return arr[arr.length - 1];
-        },
-        set: function (val) {
-            arr[arr.length - 1] = val;
-        },
-        enumerable: false,
-        configurable: true
-    });
-    arr.shuffle = function () {
-        var t = this.splice(0);
-        var l = t.length;
-        for (var i = 0; i < l; i++) {
-            this.push(t.splice(Math.floor(Math.random() * t.length), 1)[0]);
-        }
-    };
-    arr.find_id = function (ix) {
-        for (var i = 0; i < this.length; i++) {
-            if (this[i].id === ix) {
-                return this[i];
-                //return [this[i],i];
-            }
-        }
-    };
-    arr.add = function (x) {
-        this.push(x);
-    };
-
-    return arr;
+function shuffle(arr) {
+    var ret = arr.splice(0);
+    var l = ret.length;
+    for (var i = 0; i < l; i++) {
+        arr.push(ret.splice(Math.floor(Math.random() * ret.length), 1)[0]);
+    }
 }
+
+function last(arr) {
+    return arr[arr.length - 1];
+}
+
+function setId(arr) {
+    for (var i = 0; i < arr.length; i++) {
+        arr[i].id = arr[i].cover.id = 'q' + i;
+    }
+}
+//------------------------------------
 
 function Sett() {
     if (arguments.callee.__inst) {
@@ -107,11 +91,6 @@ Sett.prototype.nid = function () {
 
 sett = new Sett();
 sett.init();
-
-window.nid = 0;
-function nextId() {
-    return window.nid++;
-}
 
 var cols = {
     'ros': '\u2665',
@@ -135,382 +114,18 @@ var vals = {
     13: 'K'
 };
 
-//_______________________________________
-
-
 //________________SPYDER_STOCK________________________________________
 
 function msg(txt) {
     document.getElementById('msg').innerHTML = txt;
 }
 
-//_________________BOARD______________________________________________
-
-function Board() {
-    this.body = document.getElementById('board');
-    this.stock = Arr();
-    this.scor = document.getElementById('scor');
-    this.nomv = 0;
-
-    this.aclick = document.getElementById('clck');
-    this.aclick2 = document.getElementById('clck2');
-    this.aerr = document.getElementById('aerr');
-    this.adeal = document.getElementById('adeal');
-    this.adown = document.getElementById('adown');
-
-    var etalon = card(2, 'rom');
-    etalon.x = -1000;
-    this.body.appendChild(etalon);
-    etalon.cover.classList.remove('down');
-    etalon.style.zIndex = this.z;
-    etalon.style.left = etalon.x;
-
-    this.win_wh = {
-        w: window.innerWidth,
-        h: window.innerHeight
-    };
-    this.body.style.height = (this.win_wh.h - 20) + 'px';
-    this.wh = {
-        w: this.body.offsetWidth,
-        h: this.body.offsetHeight,
-        ew: etalon.offsetWidth,
-        eh: etalon.offsetHeight
-    };
-    etalon.remove();
-    delete (etalon);
-    this.move = {
-        x: 0,
-        y: 0,
-        dx: 0,
-        dy: 0,
-        obj: null
-    };
-    this.MOVE = false;
-    this.body.style.fontSize = (this.wh.w / 10 / 5 - 1) + 'px';
-
-    this.lay();
-    this.set_evt();
-}
-
-Board.prototype.lay = function () {
-    var i, pos, k, crd, sp;
-
-    for (var v in vals) {
-        for (i = 0; i < 8; i++) {
-            //crd = new Card(parseInt(v), 'ngr');
-            crd = card(parseInt(v), 'ngr');
-            this.body.appendChild(crd);
-            this.stock.push(crd);
-        }
-    }
-    this.stock.shuffle();
-
-    this.slots = Arr();
-    this.pos = [];
-
-    k = 0;
-
-    sp = (this.wh.w - this.wh.ew) / 9;
-    for (i = 0; i < 10; i++) {
-        pos = k++ * sp;
-        this.pos.push(pos);
-        this.slots.push(Arr());
-    }
-    this.slots.push(Arr());//[10]restul de cărți
-    this.slots.push(Arr());//[11] cărțile luate de pe masă
-
-    for (i = 0; i < 54; i++) {
-        crd = this.stock[i];
-        crd.slot = i % 10;
-        crd.xy(this.pos[i % 10], Math.floor(i / 10) * 5, i);
-        this.slots[i % 10].push(crd);
-        if (i > 43)crd.up();
-    }
-    k = -10;
-    for (i = 54; i < this.stock.length; i++) {
-        if ((i - 54) % 10 === 0)k += 10;
-        crd = this.stock[i];
-        crd.slot = 10;
-        this.slots[10].push(crd);
-        crd.xy(this.wh.w - this.wh.ew - k, this.wh.h - this.wh.eh, i);
-    }
-    msg('Start');
-};
-
-Board.prototype.lay_even = function (pos, old) {
-    var i, k = 0, z = 0;
-    var self = this;
-    for (i = 0; i < this.slots[pos].length; i++) {
-        this.slots[pos][i].x = this.pos[pos];
-        this.slots[pos][i].y = k;
-        //$(this.slots[pos][i].body).animate({left: this.pos[pos] + 'px', top: k + 'px'}, 200);
-        this.slots[pos][i].anim({left: this.pos[pos], top: k}, 300, function () {
-            if (self.slots[pos][z]) self.slots[pos][z].zix(++z);
-        });
-        k += (this.slots[pos][i].down) ? 5 : 30;
-    }
-
-    if (old)this.slots[old].last.up();
-};
-
-Board.prototype.is_suit = function (arr) {
-    var i;
-    if (arr[arr.length - 1].down)return false;
-    for (i = 0; i < arr.length - 1; i++) {
-        if (arr[i].val - arr[i + 1].val != 1 || arr[1].down) {
-            return false;
-        }
-    }
-    return true;
-};
-
-Board.prototype.is_suit_slot = function (slot, pos) {
-    var i;
-    if (this.slots[slot].last.down)return false;
-    for (i = pos; i < this.slots[slot].length - 1; i++) {
-        if (this.slots[slot][i].val - this.slots[slot][i + 1].val != 1 || this.slots[slot][i].down) {
-            return false;
-        }
-    }
-    return true;
-};
-
-Board.prototype.end_suit = function (pos) {
-    var i, k = 0;
-    for (i = this.slots[pos].length - 1; i > 0; i--) {
-        if (this.slots[pos][i - 1].val - this.slots[pos][i].val === 1) {
-            k++;
-        } else {
-            return k;
-        }
-    }
-    return k;
-};
-
-Board.prototype.check = function (slot) {
-    if (this.slots[slot].length < 13 || !this.is_suit_slot(slot, this.slots[slot].length - 13)) {
-        this.lay_even(slot);
-        return;
-    }
-    var i;
-    player.play(this.adown);
-
-    var k = 0, z = 0;
-    var self = this;
-    for (i = 0; i < this.slots[slot].length - 1; i++) {
-        this.slots[slot][i].anim({left: this.pos[slot], top: k}, 400, function () {
-            if (self.slots[slot][z]) self.slots[slot][z].zix(++z);
-        });
-        k += (this.slots[slot][i].down) ? 5 : 30;
-    }
-    this.slots[slot].last.anim({left: this.pos[slot], top: k}, 450, function () {
-        var x = self.slots[11].length / 13 * 10;
-        var a = self.slots[slot].splice(self.slots[slot].length - 13);
-        if (self.slots[slot].length)self.slots[slot].last.up();
-        for (i = 0; i < a.length; i++) {
-            a[i].slot = 11;
-            self.slots[11].push(a[i]);
-            a[i].anim({left: x, top: self.wh.h - self.wh.eh}, 800);
-        }
-    });
-    for (i = 0; i < 10; i++) {
-        if (this.slots[i].length) return;
-    }
-    player.play(document.getElementById('awin'));
-    msg('<h1>Win!</h1>');
-};
-
-Board.prototype.inc_mv = function () {
-    this.scor.innerHTML = 'Mutări: ' + ++this.nomv;
-};
-
-Board.prototype.check_slot = function () {
-    var crd = this.move.obj;
-    var x = crd.x, pos = 0, oldslot, i;
-    var m = Math.abs(x - this.pos[0]);
-    var v;
-    for (i = 0; i < 10; i++) {
-        v = Math.abs(x - this.pos[i]);
-        if (v <= m) {
-            m = v;
-            pos = i;
-        }
-    }
-
-    log("POS", x, pos);
-    for (i = 0; i < 10; i++) {
-        if (this.slots[i].length) {
-            this.slots[i].last.classList.remove('over');
-            this.slots[i].last.classList.remove('overok');
-        }
-    }
-
-    if (this.slots[pos].length === 0 || this.slots[pos].last.val - crd.val === 1) {
-        oldslot = crd.slot;
-        for (i = 0; i < this.move.suit.length; i++) {
-            //this.slots[pos][i].slot=pos;
-            this.slots[pos].push(this.move.suit[i]);
-            this.slots[pos].last.slot = pos;
-        }
-        log(this.slots[pos].last.x);
-        if (this.slots[oldslot].length) this.slots[oldslot].last.up();
-        this.check(crd.slot);
-        this.inc_mv();
-        player.play(this.aclick2);
-    } else {
-        this.check(crd.slot);
-        player.play(this.aerr);
-    }
-};
-Board.prototype.mv = function (x, y) {
-    var y0 = this.move.obj.y, i, v, m, xx;
-    for (i = 0; i < this.move.suit.length; i++) {
-        this.move.suit[i].xy(x - this.move.dx, y - this.move.dy + this.move.suit[i].y - y0);
-    }
-    xx = x - this.move.dx;
-    m = Math.abs(xx - this.pos[0]);
-    var p = 0;
-    for (i = 0; i < 10; i++) {
-        if (this.slots[i].length)this.slots[i].last.classList.remove('over');
-        v = Math.abs(xx - this.pos[i]);
-        if (v < m) {
-            m = v;
-            p = i
-        }
-    }
-    if (this.slots[p].length) {
-        var l = this.slots[p].last;
-        if (l.val - this.move.obj.val === 1) {
-            l.className += ' overok';
-        } else {
-            l.className += ' over';
-        }
-    }
-};
-
-Board.prototype.deal_new = function () {
-    var self = this;
-    var i, z = 0;
-    if (this.slots[10].length < 10) {
-        msg("<h2>ERR stiva rezerva</h2>");
-    }
-    for (i = 0; i < 10; i++) {
-        if (this.slots[i].length < 1) {
-            msg("Nu puteți trage cărți! Trebuie ca toate pozițiile să fie ocupate!");
-            return;
-        }
-        this.slots[i].push(this.slots[10].pop());
-        this.slots[i].last.up();
-        this.slots[i].last.slot = i;
-        this.slots[i].last.anim({
-                left: this.pos[i],
-                top: 0,
-                delay: i * 200
-            }, 400,
-            function () {
-                self.lay_even(z++);
-                player.play(self.adeal);
-            });
-    }
-};
-Board.prototype.find_place = function (c) {
-    var i, ret = [], max = [-1, -1], slice, oldslot = c.slot, empty = null;
-    if (!this.is_suit(this.slots[oldslot].slice(this.slots[oldslot].indexOf(c))))return;
-    for (i = 0; i < 10; i++) {
-        if (i === oldslot)continue;
-        if (this.slots[i].length === 0) {
-            empty = i;
-            continue;
-        }
-        if (this.slots[i][this.slots[i].length - 1].val - c.val === 1) {
-            ret.push([this.end_suit(i), i]);
-        }
-    }
-    if (ret.length === 0) {
-        if (empty == null)return;
-        if (!this.is_suit(this.slots[oldslot].slice(this.slots[oldslot].indexOf(c))))return;
-        //this.slots[empty] = [];
-        slice = this.slots[oldslot].splice(this.slots[oldslot].indexOf(c));
-        for (i = 0; i < slice.length; i++) {
-            slice[i].slot = empty;
-            this.slots[empty].push(slice[i]);
-        }
-        if (this.slots[oldslot].length > 0) this.slots[oldslot].last.up();
-        this.lay_even(empty);
-        this.inc_mv();
-        return;
-    }
-    for (i = 0; i < ret.length; i++) {
-        if (ret[i][0] > max[0]) {
-            max = ret[i];
-        }
-    }
-    max = max[1];
-    slice = this.slots[oldslot].splice(this.slots[oldslot].indexOf(c));
-    for (i = 0; i < slice.length; i++) {
-        slice[i].slot = max;
-        slice[i].zix(100 + i);
-        this.slots[max].push(slice[i]);
-    }
-    if (this.slots[oldslot].length > 0) this.slots[oldslot].last.up();
-    this.lay_even(max);
-    player.play(this.aclick2);
-    this.check(max);
-    this.inc_mv();
-};
-
-Board.prototype.set_evt = function () {
-    var self = this;
-    this.body.addEventListener('contextmenu', function (evt) {
-        evt.preventDefault();
-        var c = self.stock.find_id(evt.target.id);
-        if (c == null || c.down || c.slot > 9)return false;
-        self.find_place(c);
-        return false;
-    }, false);
-    this.body.addEventListener('mousedown', function (evt) {
-        evt.preventDefault();
-        player.play(self.aclick);
-        if (evt.button != 0)return false;
-        var c = self.stock.find_id(evt.target.id);
-        if (c && c.slot === 10) {
-            self.deal_new();
-            return false;
-        }
-        if (c == null || c.down || c.slot > 9)return false;
-        self.move.suit = self.slots[c.slot].slice(self.slots[c.slot].indexOf(c));
-        if (!self.is_suit(self.move.suit))return false;
-        self.move.x = c.x;
-        self.move.y = c.y;
-        self.move.obj = c;
-        self.move.dx = evt.pageX - c.x;
-        self.move.dy = evt.pageY - c.y;
-        self.MOVE = true;
-        for (var i = 0; i < self.move.suit.length; i++) {
-            self.move.suit[i].zix(i + 105);
-        }
-    }, false);
-    this.body.addEventListener('mousemove', function (evt) {
-        evt.preventDefault();
-        if (self.MOVE === false)return false;
-        self.mv(evt.pageX, evt.pageY);
-    }, false);
-    this.body.addEventListener('mouseup', function (evt) {
-        evt.preventDefault();
-        if (!self.MOVE)return false;
-        self.MOVE = false;
-        self.check_slot();
-    }, false);
-};
-
 //__________________CARD_______________________________________________
 
 function gen_card(val, col) {
     var e, i, id;
-    id = nextId();
     e = document.createElement('div');
     e.className = 'card ' + col;
-    e.id = 'card' + id;
 
     i = document.createElement('i');
     i.innerHTML = cols[col];
@@ -528,22 +143,19 @@ function gen_card(val, col) {
 
     i = document.createElement('div');
     i.className = 'cover down';
-    i.id = id + '';
 
     e.appendChild(i);
 
-    return [e, i, id];
+    return [e, i];
 }
 
 function card(val, col) {
     var e = gen_card(val, col);
     var elm = e[0];
     elm.val = val;
-    elm.col = col;
     elm.cover = e[1];
-    elm.id = '' + e[2];
     elm.down = true;
-    elm.slot = 0;
+    elm.slot = -1;
     elm.x = 0;
     elm.y = 0;
     elm.z = 1;
@@ -584,8 +196,10 @@ function card(val, col) {
             var dt = new Date - elm.start;
             if (dt >= t) {
                 clearInterval(elm.sin);
-                elm.style.left = elm.x = prop['left'] + 'px';
-                elm.style.top = elm.y = prop['top'] + 'px';
+                elm.style.left = prop['left'] + 'px';
+                elm.style.top = prop['top'] + 'px';
+                elm.x = prop['left'];
+                elm.y = prop['top'];
                 if (end) end();
                 return;
             }
@@ -609,4 +223,303 @@ function card(val, col) {
 }
 
 //.appendChild(gen_card(14, 'trf')[0]);
+//new Board();
+
+function Board() {
+    this.body = document.getElementById('board');
+    this.stock = [];
+    this.scor = document.getElementById('scor');
+    this.nomv = 0;
+
+    this.aclick = document.getElementById('clck');
+    this.aclick2 = document.getElementById('clck2');
+    this.aerr = document.getElementById('aerr');
+    this.adeal = document.getElementById('adeal');
+    this.adown = document.getElementById('adown');
+
+    this.body.style.height = (window.innerHeight - 20) + 'px';
+
+    this.move = {};
+    this.MOVE = false;
+    this.body.style.fontSize = (this.body.offsetWidth / 10 / 5 - 1) + 'px';
+
+    this.lay();
+    this.set_evt();
+}
+
+Board.prototype.lay_even = function (pos) {
+    var i, k = 0, z = 0;
+    var self = this, arr = this.slots[pos];
+    for (i = 0; i < arr.length; i++) {
+        arr[i].anim({left: this.pos[pos], top: k}, 300, function () {
+            self.slots[pos][z].zix(++z);
+        });
+        k += (this.slots[pos][i].down) ? 5 : 30;
+    }
+};
+
+Board.prototype.inc_mv = function () {
+    this.scor.innerHTML = 'Mutări: ' + ++this.nomv;
+};
+
+Board.prototype.check = function (pos) {
+    var arr = this.slots[pos];
+    if (arr.length < 13) {
+        this.lay_even(pos);
+        return;
+    }
+    var i, k = 0, z = 0, self = this;
+    for (i = 0; i < arr.length - 1; i++) {
+        if (arr[i].val - arr[i + 1].val != 1 || arr[i].down) {
+            this.lay_even(pos);
+            return false;
+        }
+        arr[i].anim({left: this.pos[pos], top: k}, 400, function () {
+            self.slots[pos][z].zix(++z);
+        });
+        k += (this.slots[pos][i].down) ? 5 : 30;
+    }
+    player.play(this.adown);
+
+    last(this.slots[pos]).anim({left: this.pos[pos], top: k}, 450, function () {
+        var x = self.slots[11].length / 13 * 10;
+        var a = self.slots[pos].splice(self.slots[pos].length - 13);
+        if (self.slots[pos].length > 0) {
+            last(self.slots[pos]).up();
+        }
+        for (i = 0; i < a.length; i++) {
+            a[i].slot = 11;
+            a[i].anim({left: x, top: self.body.offsetHeight - self.stock[0].offsetHeight}, 600);
+        }
+        self.slots[11] = self.slots[11].concat(a);
+    });
+    for (i = 0; i < 10; i++) {
+        if (this.slots[i].length) return;
+    }
+    player.play(document.getElementById('awin'));
+    msg('<h1>Win!</h1>');
+};
+
+Board.prototype.find_place = function (arr) {
+    var i, ret = [], max = [-1, -1], oldslot = arr[0].slot, empty = null;
+    var self = this;
+
+    function end_suit(pos) {
+        var i, k = 0;
+        for (i = self.slots[pos].length - 1; i > 0; i--) {
+            if (self.slots[pos][i - 1].val - self.slots[pos][i].val === 1) {
+                k++;
+            } else {
+                return k;
+            }
+        }
+        return k;
+    }
+
+    for (i = 0; i < 10; i++) {
+        if (i === oldslot) continue;
+        if (this.slots[i].length === 0) {
+            empty = i;
+            continue;
+        }
+        if (last(this.slots[i]).val - arr[0].val === 1) {
+            ret.push([end_suit(i), i]);
+        }
+    }
+    if (ret.length === 0) {
+        if (empty == null){
+            this.slots[oldslot] = this.slots[oldslot].concat(arr);
+            return;
+        }
+        for (i = 0; i < arr.length; i++) {
+            arr[i].slot = empty;
+            arr[i].style.zIndex = 106;
+        }
+        this.slots[empty] = this.slots[empty].concat(arr);
+        if (this.slots[oldslot].length > 0) last(this.slots[oldslot]).up();
+        this.lay_even(empty);
+        player.play(this.aclick2);
+        this.inc_mv();
+        return;
+    }
+    for (i = 0; i < ret.length; i++) {
+        if (ret[i][0] > max[0]) {
+            max = ret[i];
+        }
+    }
+    max = max[1];
+    for (i = 0; i < arr.length; i++) {
+        arr[i].slot = max;
+        arr[i].style.zIndex = 106;
+    }
+    this.slots[max] = this.slots[max].concat(arr);
+    if (this.slots[oldslot].length > 0) last(this.slots[oldslot]).up();
+    player.play(this.aclick2);
+    this.check(max);
+    this.inc_mv();
+};
+
+
+Board.prototype.set_evt = function () {
+    var self = this, c, i, arr;
+
+    this.body.addEventListener('contextmenu', function (evt) {
+        evt.preventDefault();
+        player.play(self.aclick);
+        var c = self.stock[parseInt(evt.target.id.substr(1))];
+        if (c == null || c.down || c.slot > 9)return false;
+        arr = self.slots[c.slot].splice(self.slots[c.slot].indexOf(c));
+        for (i = 0; i < arr.length - 1; i++) {
+            if (arr[i].val - arr[i + 1].val != 1 || arr[i].down) {
+                self.slots[c.slot] = self.slots[c.slot].concat(arr);
+                return;
+            }
+        }
+        self.find_place(arr);
+    }, false);
+
+    this.body.addEventListener('dblclick', function (evt) {
+        evt.preventDefault();
+    }, false);
+
+    this.body.addEventListener('mousedown', function (evt) {
+        evt.preventDefault();
+        if (evt.button != 0)return;
+        c = self.stock[parseInt(evt.target.id.substr(1))];
+        if (!c)return;
+        player.play(self.aclick);
+        if (c.slot === 10) {
+            var i, z = 0;
+
+            for (i = 0; i < 10; i++) {
+                if (self.slots[i].length < 1) {
+                    msg("Nu puteți trage cărți! Trebuie ca toate pozițiile să fie ocupate!");
+                    return;
+                }
+            }
+            for (i = 0; i < 10; i++) {
+                self.slots[i].push(self.slots[10].pop());
+                last(self.slots[i]).up();
+                last(self.slots[i]).slot = i;
+                last(self.slots[i]).anim({
+                    left: self.pos[i],
+                    top: 0,
+                    delay: i * 200
+                }, 400, function () {
+                    self.lay_even(z++);
+                    player.play(self.adeal);
+                });
+            }
+            return;
+        }
+        if (c.down || c.slot > 9)return;
+        arr = self.slots[c.slot].splice(self.slots[c.slot].indexOf(c));
+        for (i = 0; i < arr.length - 1; i++) {
+            if (arr[i].val - arr[i + 1].val != 1 || arr[i].down) {
+                self.slots[c.slot] = self.slots[c.slot].concat(arr);
+                self.MOVE = false;
+                return;
+            }
+            arr[i].style.zIndex = arr[i].z = (i + 105);
+        }
+        self.move = {
+            suit: arr,
+            x: c.x,
+            y: c.y,
+            dx: evt.pageX - c.x,
+            dy: evt.pageY - c.y,
+            alt: (last(arr).offsetTop - arr[0].offsetTop) / (arr.length - 1) || 0,
+            slot: c.slot
+        };
+
+        last(arr).style.zIndex = last(arr).z = arr.length + 105;
+        self.MOVE = true;
+        evt.preventDefault();
+    }, false);
+
+    this.body.addEventListener('mousemove', function (evt) {
+        if (!self.MOVE) return;
+        var i, l = self.move.suit.length;
+        for (i = 0; i < l; i++) {
+            self.move.suit[i].xy(
+                evt.pageX - self.move.dx,
+                evt.pageY - self.move.dy + self.move.alt * i
+            );
+        }
+        evt.preventDefault();
+    }, false);
+
+    this.body.addEventListener('mouseup', function (evt) {
+        if (!self.MOVE) return;
+        self.MOVE = false;
+        var m, v;
+        //var crd = this.move.obj;
+        var x = self.move.suit[0].x, pos = 0, oldslot, i;
+        m = self.body.offsetWidth;
+        for (i = 0; i < 10; i++) {
+            if (i === self.move.slot) continue;
+            v = Math.abs(x - self.pos[i]);
+            if (v < m) {
+                m = v;
+                pos = i;
+            }
+        }
+
+        if (self.slots[pos].length === 0 || last(self.slots[pos]).val - self.move.suit[0].val === 1) {
+            self.slots[pos] = self.slots[pos].concat(self.move.suit);
+            for (i = 0; i < self.slots[pos].length; i++) {
+                self.slots[pos][i].slot = pos;
+            }
+            if (self.slots[self.move.slot].length > 0) last(self.slots[self.move.slot]).up();
+            self.check(pos);
+            self.inc_mv();
+            player.play(self.aclick2);
+        } else {
+            self.slots[self.move.slot] = self.slots[self.move.slot].concat(self.move.suit);
+            player.play(self.aerr);
+            self.lay_even(self.move.slot);
+        }
+        evt.preventDefault();
+    }, false);
+};
+
+Board.prototype.lay = function () {
+    var i, pos, k, crd, sp;
+    for (var v in vals) {
+        for (i = 0; i < 8; i++) {
+            crd = card(parseInt(v), 'ngr');
+            this.body.appendChild(crd);
+            this.stock.push(crd);
+        }
+    }
+    shuffle(this.stock);
+    setId(this.stock);
+    this.slots = [];
+    this.pos = [];
+    k = 0;
+    sp = (this.body.offsetWidth - crd.offsetWidth) / 9;
+    for (i = 0; i < 10; i++) {
+        pos = k++ * sp;
+        this.pos.push(pos);
+        this.slots.push([]);
+    }
+    this.slots.push([]);//[10]restul de cărți
+    this.slots.push([]);//[11] cărțile luate de pe masă
+
+    for (i = 0; i < 54; i++) {
+        this.stock[i].slot = i % 10;
+        this.stock[i].xy(this.pos[i % 10], Math.floor(i / 10) * 5, i);
+        this.slots[i % 10].push(this.stock[i]);
+        if (i > 43)this.stock[i].up();
+    }
+    k = -10;
+    for (i = 54; i < this.stock.length; i++) {
+        if ((i - 54) % 10 === 0)k += 10;
+        this.stock[i].slot = 10;
+        this.slots[10].push(this.stock[i]);
+        this.stock[i].xy(this.body.offsetWidth - crd.offsetWidth - k, this.body.offsetHeight - crd.offsetHeight, i);
+    }
+    msg('Start');
+};
+
 new Board();
