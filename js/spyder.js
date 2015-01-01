@@ -1,10 +1,6 @@
 /**
  * Created by cosmin on 21.12.2014.
  */
-function extend(child, tata) {
-    child.prototype = Object.create(tata.prototype);
-    child.prototype.constructor = child;
-}
 
 function log() {
     var args;
@@ -16,27 +12,10 @@ Element.prototype.remove = function () {
     this.parentElement.removeChild(this);
 };
 
-/*Element.prototype.w = function (w) {
- if (w == undefined) {
- return this.scrollWidth;
- }
- this.style.width = w + 'px';
- };
- Element.prototype.h = function (h) {
- if (h == undefined) {
- return this.clientHeight;
- }
- this.style.height = h + 'px';
- };
+function easeInOutQuad(t) {
+    return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+}
 
- NodeList.prototype.remove = HTMLCollection.prototype.remove = function () {
- for (var i = 0, len = this.length; i < len; i++) {
- if (this[i] && this[i].parentElement) {
- this[i].parentElement.removeChild(this[i]);
- }
- }
- };
- */
 //-------PLAY multi------------------------------------
 function Play() {
     if (arguments.callee.__inst) {
@@ -67,9 +46,11 @@ Play.prototype.play = function (e) {
         }
     }
 };
+
 Play.prototype.mute = function () {
     this.MUTE = !this.MUTE;
 };
+
 var player = new Play();
 //-------------------------------------------------
 
@@ -156,6 +137,7 @@ var vals = {
 
 //_______________________________________
 
+
 //________________SPYDER_STOCK________________________________________
 
 function msg(txt) {
@@ -176,13 +158,12 @@ function Board() {
     this.adeal = document.getElementById('adeal');
     this.adown = document.getElementById('adown');
 
-    this.tout = null;
-    this.tcount = 0;
-
-    var etalon = new Card(2, 'rom');
+    var etalon = card(2, 'rom');
     etalon.x = -1000;
-    this.body.appendChild(etalon.body);
-    etalon.show();
+    this.body.appendChild(etalon);
+    etalon.cover.classList.remove('down');
+    etalon.style.zIndex = this.z;
+    etalon.style.left = etalon.x;
 
     this.win_wh = {
         w: window.innerWidth,
@@ -192,11 +173,11 @@ function Board() {
     this.wh = {
         w: this.body.offsetWidth,
         h: this.body.offsetHeight,
-        ew: etalon.body.offsetWidth,
-        eh: etalon.body.offsetHeight
+        ew: etalon.offsetWidth,
+        eh: etalon.offsetHeight
     };
-    etalon.body.remove();
-    delete etalon;
+    etalon.remove();
+    delete (etalon);
     this.move = {
         x: 0,
         y: 0,
@@ -207,25 +188,23 @@ function Board() {
     this.MOVE = false;
     this.body.style.fontSize = (this.wh.w / 10 / 5 - 1) + 'px';
 
-    this.gen_spyder_suit();
     this.lay();
     this.set_evt();
 }
 
-Board.prototype.gen_spyder_suit = function () {
-    var crd, self = this, i;
+Board.prototype.lay = function () {
+    var i, pos, k, crd, sp;
+
     for (var v in vals) {
         for (i = 0; i < 8; i++) {
-            crd = new Card(parseInt(v), 'ngr');
-            this.body.appendChild(crd.body);
+            //crd = new Card(parseInt(v), 'ngr');
+            crd = card(parseInt(v), 'ngr');
+            this.body.appendChild(crd);
             this.stock.push(crd);
         }
     }
     this.stock.shuffle();
-};
 
-Board.prototype.lay = function () {
-    var i, pos, k, crd, sp;
     this.slots = Arr();
     this.pos = [];
 
@@ -264,10 +243,13 @@ Board.prototype.lay_even = function (pos, old) {
     for (i = 0; i < this.slots[pos].length; i++) {
         this.slots[pos][i].x = this.pos[pos];
         this.slots[pos][i].y = k;
-        this.slots[pos][i].body.style.zIndex = ++z;
-        $(this.slots[pos][i].body).animate({left: this.pos[pos] + 'px', top: k + 'px'}, 200);
+        //$(this.slots[pos][i].body).animate({left: this.pos[pos] + 'px', top: k + 'px'}, 200);
+        this.slots[pos][i].anim({left: this.pos[pos], top: k}, 300, function () {
+            if (self.slots[pos][z]) self.slots[pos][z].zix(++z);
+        });
         k += (this.slots[pos][i].down) ? 5 : 30;
     }
+
     if (old)this.slots[old].last.up();
 };
 
@@ -306,23 +288,31 @@ Board.prototype.end_suit = function (pos) {
 };
 
 Board.prototype.check = function (slot) {
-    if (this.slots[slot].length < 13)return -1;
-    var i, crd, k = null;
-
-    if (!this.is_suit_slot(slot, this.slots[slot].length - 13))return;
-
-    player.play(this.adown);
-    var x = this.slots[11].length / 13 * 10;
-    for (i = this.slots[slot].length - 13; i < this.slots[slot].length; i++) {
-        crd = this.slots[slot][i];
-        crd.pos(x, this.wh.h - this.wh.eh);
-        crd.zix(x);
-        crd.slot = 11;
-        this.slots[11].push(crd);
+    if (this.slots[slot].length < 13 || !this.is_suit_slot(slot, this.slots[slot].length - 13)) {
+        this.lay_even(slot);
+        return;
     }
-    this.slots[slot].splice(this.slots[slot].length - 13);
-    if (this.slots[slot].length) this.slots[slot].last.up();
+    var i;
+    player.play(this.adown);
 
+    var k = 0, z = 0;
+    var self = this;
+    for (i = 0; i < this.slots[slot].length - 1; i++) {
+        this.slots[slot][i].anim({left: this.pos[slot], top: k}, 400, function () {
+            if (self.slots[slot][z]) self.slots[slot][z].zix(++z);
+        });
+        k += (this.slots[slot][i].down) ? 5 : 30;
+    }
+    this.slots[slot].last.anim({left: this.pos[slot], top: k}, 450, function () {
+        var x = self.slots[11].length / 13 * 10;
+        var a = self.slots[slot].splice(self.slots[slot].length - 13);
+        if (self.slots[slot].length)self.slots[slot].last.up();
+        for (i = 0; i < a.length; i++) {
+            a[i].slot = 11;
+            self.slots[11].push(a[i]);
+            a[i].anim({left: x, top: self.wh.h - self.wh.eh}, 800);
+        }
+    });
     for (i = 0; i < 10; i++) {
         if (this.slots[i].length) return;
     }
@@ -333,35 +323,41 @@ Board.prototype.check = function (slot) {
 Board.prototype.inc_mv = function () {
     this.scor.innerHTML = 'Mutări: ' + ++this.nomv;
 };
+
 Board.prototype.check_slot = function () {
     var crd = this.move.obj;
-    var x = crd.x, pos, oldslot, i;
-    var m = this.pos.map(function (arg) {
-        return Math.abs(x - arg);
-    });
-    pos = m.indexOf(Math.min.apply(null, m));
+    var x = crd.x, pos = 0, oldslot, i;
+    var m = Math.abs(x - this.pos[0]);
+    var v;
+    for (i = 0; i < 10; i++) {
+        v = Math.abs(x - this.pos[i]);
+        if (v <= m) {
+            m = v;
+            pos = i;
+        }
+    }
 
+    log("POS", x, pos);
     for (i = 0; i < 10; i++) {
         if (this.slots[i].length) {
-            this.slots[i].last.body.classList.remove('over');
-            this.slots[i].last.body.classList.remove('overok');
+            this.slots[i].last.classList.remove('over');
+            this.slots[i].last.classList.remove('overok');
         }
     }
 
     if (this.slots[pos].length === 0 || this.slots[pos].last.val - crd.val === 1) {
         oldslot = crd.slot;
         for (i = 0; i < this.move.suit.length; i++) {
-            this.slots[oldslot].pop();
-            this.move.suit[i].slot = pos;
+            //this.slots[pos][i].slot=pos;
             this.slots[pos].push(this.move.suit[i]);
+            this.slots[pos].last.slot = pos;
         }
-        this.lay_even(pos);
+        log(this.slots[pos].last.x);
         if (this.slots[oldslot].length) this.slots[oldslot].last.up();
         this.check(crd.slot);
         this.inc_mv();
         player.play(this.aclick2);
     } else {
-        this.lay_even(crd.slot);
         this.check(crd.slot);
         player.play(this.aerr);
     }
@@ -372,11 +368,10 @@ Board.prototype.mv = function (x, y) {
         this.move.suit[i].xy(x - this.move.dx, y - this.move.dy + this.move.suit[i].y - y0);
     }
     xx = x - this.move.dx;
-
     m = Math.abs(xx - this.pos[0]);
     var p = 0;
     for (i = 0; i < 10; i++) {
-        if (this.slots[i].length)this.slots[i].last.body.classList.remove('over');
+        if (this.slots[i].length)this.slots[i].last.classList.remove('over');
         v = Math.abs(xx - this.pos[i]);
         if (v < m) {
             m = v;
@@ -386,44 +381,16 @@ Board.prototype.mv = function (x, y) {
     if (this.slots[p].length) {
         var l = this.slots[p].last;
         if (l.val - this.move.obj.val === 1) {
-            l.body.className += ' overok';
+            l.className += ' overok';
         } else {
-            l.body.className += ' over';
+            l.className += ' over';
         }
     }
 };
 
-Board.prototype.qmove = function () {
-    var self = this;
-    var crd;
-    clearTimeout(this.tout);
-    crd = this.slots[10].pop();
-    crd.up();
-    crd.slot = this.tcount;
-    this.slots[this.tcount].push(crd);
-    crd.x = this.pos[this.tcount];
-    crd.y = this.slots[this.tcount][this.slots[this.tcount].length - 2].y;
-    $(crd.body).animate({
-        left: crd.x + 'px',
-        top: crd.y + 'px'
-    }, 500, function () {
-        player.play(self.adeal);
-        self.lay_even(crd.slot);
-        self.check(crd.slot);
-    });
-    this.check(this.tcount);
-    if (++this.tcount < 10) {
-        this.tout = setTimeout(function () {
-            self.qmove();
-        }, 200);
-    } else {
-        this.tcount = 0;
-    }
-
-};
 Board.prototype.deal_new = function () {
     var self = this;
-    var i;
+    var i, z = 0;
     if (this.slots[10].length < 10) {
         msg("<h2>ERR stiva rezerva</h2>");
     }
@@ -432,19 +399,19 @@ Board.prototype.deal_new = function () {
             msg("Nu puteți trage cărți! Trebuie ca toate pozițiile să fie ocupate!");
             return;
         }
+        this.slots[i].push(this.slots[10].pop());
+        this.slots[i].last.up();
+        this.slots[i].last.slot = i;
+        this.slots[i].last.anim({
+                left: this.pos[i],
+                top: 0,
+                delay: i * 200
+            }, 400,
+            function () {
+                self.lay_even(z++);
+                player.play(self.adeal);
+            });
     }
-    this.tout = setTimeout(function () {
-        self.qmove();
-    }, 10);
-    /*for (i = 0; i < 10; i++) {
-     crd = this.slots[10].pop();
-     crd.up();
-     crd.slot = i;
-     this.slots[i].push(crd);
-     //crd.poscb(this.pos[i], this.slots[i][this.slots[i].length - 2].y + 30, 600, this, i);
-
-     //this.check(i);
-     }*/
 };
 Board.prototype.find_place = function (c) {
     var i, ret = [], max = [-1, -1], slice, oldslot = c.slot, empty = null;
@@ -568,69 +535,78 @@ function gen_card(val, col) {
     return [e, i, id];
 }
 
-function Card(val, col) {
-    this.val = val;
-    this.col = col;
+function card(val, col) {
     var e = gen_card(val, col);
-    this.body = e[0];
-    this.cover = e[1];
-    this.id = '' + e[2];
-    this.down = true;
-    this.slot = 0;
-    this.x = 0;
-    this.y = 0;
-    this.z = 1;
+    var elm = e[0];
+    elm.val = val;
+    elm.col = col;
+    elm.cover = e[1];
+    elm.id = '' + e[2];
+    elm.down = true;
+    elm.slot = 0;
+    elm.x = 0;
+    elm.y = 0;
+    elm.z = 1;
+    elm.up = function () {
+        elm.down = false;
+        elm.cover.classList.remove('down');
+    };
+    elm.down = function () {
+        elm.down = true;
+        elm.cover.classList.add('down');
+    };
+    elm.xy = function (x, y, z) {
+        elm.x = x;
+        elm.y = (y == null) ? elm.y : y;
+        elm.z = (z == null) ? elm.z : z;
+        elm.style.left = x + 'px';
+        elm.style.top = y + 'px';
+        elm.style.zIndex = elm.z;
+    };
+    elm.zix = function (z) {
+        elm.style.zIndex = elm.z = z;
+    };
+    elm.anim = function (prop, t, end) {
+        if (prop['delay'] != null) {
+            setTimeout(function () {
+                elm.anim({left: prop['left'], top: prop['top']}, t, end);
+            }, prop['delay']);
+            return;
+        }
+        t = t || 400;
+        elm.y = elm.offsetTop;
+        elm.x = elm.offsetLeft;
+        elm.dx = prop['left'] - elm.x;
+        elm.dy = prop['top'] - elm.y;
+        elm.start = new Date;
+        elm.sin = setInterval(function () {
+            var i;
+            var dt = new Date - elm.start;
+            if (dt >= t) {
+                clearInterval(elm.sin);
+                elm.style.left = elm.x = prop['left'] + 'px';
+                elm.style.top = elm.y = prop['top'] + 'px';
+                if (end) end();
+                return;
+            }
+            for (i in prop) {
+                switch (i) {
+                    case 'left':
+                        elm.style.left = (easeInOutQuad(dt / t) * elm.dx + elm.x) + 'px';
+                        break;
+                    case 'top':
+                        elm.style.top = (easeInOutQuad(dt / t) * elm.dy + elm.y) + 'px';
+                        break;
+                }
+            }
+        }, 15);
+    };
+    elm.stop = function () {
+        clearInterval(elm.sin);
+        return elm;
+    };
+    return elm;
 }
 
-Card.prototype.is_down = function () {
-    return this.cover.className.indexOf('down') > 0;
-};
-Card.prototype.up = function up() {
-    this.cover.classList.remove('down');
-    this.down = false;
-};
-Card.prototype.down = function () {
-    this.down = true;
-    if (this.is_down())return;
-    this.cover.classList.add('down');
-};
-Card.prototype.flip = function () {
-    if (this.is_down()) {
-        this.up();
-    } else {
-        this.down();
-    }
-};
-
-Card.prototype.show = function () {
-    //this.body.style.left = this.x + 'px';
-    //this.body.style.top = this.y + 'py';
-    this.cover.classList.remove('down');
-    this.body.style.zIndex = this.z;
-    this.down = false;
-    $(this.body).animate({left: this.x + 'px', top: this.y + 'px', zIndex: this.z}, 200);
-};
-Card.prototype.xy = function (x, y, z) {
-    this.body.style.left = x + 'px';
-    this.body.style.top = y + 'px';
-    this.z = z || this.z;
-    this.body.style.zIndex = this.z;
-    this.x = x;
-    this.y = y;
-
-};
-Card.prototype.pos = function (x, y, d) {
-    this.x = x;
-    this.y = (y == null) ? this.y : y;
-    $(this.body).stop().animate({left: this.x + 'px', top: this.y + 'px'}, d || 300);
-};
-
-Card.prototype.zix = function (z) {
-    this.z = z;
-    this.body.style.zIndex = z;
-};
-//_______________________________________________________
-
-
 //.appendChild(gen_card(14, 'trf')[0]);
-var b = new Board();
+new Board();
