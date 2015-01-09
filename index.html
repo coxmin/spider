@@ -7,7 +7,6 @@
     <title>Spyder</title>
     <!--link href='http://fonts.googleapis.com/css?family=Oswald:400,700' rel='stylesheet' type='text/css'>
     <link href='http://fonts.googleapis.com/css?family=Baumans' rel='stylesheet' type='text/css'-->
-    <link rel="stylesheet" href="css/index.css">
     <link rel="stylesheet" href="css/spyder.css">
 </head>
 
@@ -15,25 +14,34 @@
 
 <div id="main">
     <div class="page">
-        <div class="c8">
-            <div id="board"></div>
+        <div class="c9">
+            <div id="board">
+            </div>
         </div>
-        <div class="c2">
+        <div class="c1">
             <div class="scor" id="scor">0</div>
             <div class="msg" id="msg">_</div>
-            <br>
-            <button onclick="player.mute();">Mute</button>
+            <button id="mute">mute</button>
+            <button id="res">restart</button>
+            <hr>
+            <button id="test">test</button>
         </div>
 
     </div>
+    <div class="message" id="message">
+        <div class="mttl" id="mttl"></div>
+        <div class="mtxt" id="mtxt"></div>
+        <i class="close" id="close"></i>
+    </div>
 </div>
-<audio src="res/click_one.wav" id="clck" preload="auto"></audio>
-<!--audio src="res/th.ogg" id="clck2"></audio-->
-<audio src="res/oven.ogg" id="clck2" preload="auto"></audio>
+
+<!--audio src="res/click_one.wav" id="aclick" preload="auto"></audio-->
+<audio src="res/oven.ogg" id="aoven" preload="auto"></audio>
 <audio src="res/err.wav" id="aerr" preload="auto"></audio>
-<audio src="res/chin.ogg" id="adeal" preload="auto"></audio>
-<audio src="res/Chirp.ogg" id="adown" preload="auto"></audio>
-<audio src="res/SmallGlockA.wav" id="awin" preload="auto"></audio>
+<audio src="res/chin.ogg" id="aclick" preload="auto"></audio>
+<audio src="res/Chirp.ogg" id="awin" preload="auto"></audio>
+<audio src="res/SmallGlockA.wav" id="adown" preload="auto"></audio>
+
 <script type="text/javascript" src="js/spyder.js"></script>
 
 </body>
