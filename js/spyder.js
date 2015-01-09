@@ -2,8 +2,14 @@
  * Created by cosmin on 21.12.2014.
  * mod: 06.01.2015.
  */
+
 function log() {
-    console.log(arguments);
+    var arg = [].slice.call(arguments, 0);
+    if (arg.length === 1) {
+        console.log(arg[0]);
+    } else {
+        console.log(arg);
+    }
 }
 
 function easeInOutQuad(t) {
@@ -27,9 +33,7 @@ function setId(arr) {
         arr[i].id = 'q' + i;
     }
 }
-//Element.prototype.remove = function () {
-//    this.parentElement.removeChild(this);
-//};
+
 function _(e) {
     var elm = (typeof e === "string") ? document.querySelector(e) : e;
     elm.arr = [];
@@ -191,7 +195,6 @@ function Player() {
 
 var player = new Player();
 
-
 function spyder() {
     function card(val) {
         var e = document.createElement('div');
@@ -215,19 +218,18 @@ function spyder() {
         return elm;
     }
 
-
     this.body = document.getElementById('board');
     this.scor = document.getElementById('scor');
     this.nomv = 0;
-
     this.body.style.height = (window.innerHeight - 10) + 'px';
-
     this.msg = new Message();
     this.move = {};
     this.MOVE = false;
     this.body.style.fontSize = (this.body.offsetWidth / 10 / 5 - 1) + 'px';
     this.aclick = document.getElementById('aclick');
     this.ystep = this.body.offsetHeight / 25;
+    this.undo = document.getElementById('undo');
+    this.redo = document.getElementById('redo');
     var self = this;
 
     function lay() {
@@ -252,7 +254,6 @@ function spyder() {
         self.nomv = -1;
         self.buff = [];
         self.rbuff = [];
-        self.crs = -1;
         inc_mv();
         k = 0;
         sp = (self.body.offsetWidth - self.stock[0].offsetWidth) / 9;
@@ -310,6 +311,9 @@ function spyder() {
 
     function inc_mv() {
         self.scor.innerHTML = 'Mutări: ' + ++self.nomv;
+        if (self.buff.length > 0) {
+            self.undo.classList.remove('disabled');
+        }
     }
 
     function check(pos) {
@@ -329,6 +333,8 @@ function spyder() {
         }
 
         self.buff.push({
+            old: pos,
+            down: (self.slots[pos].length > 13) ? self.slots[pos][self.slots[pos].length - 14].down : false,
             op: 2,
             arr: self.slots[pos].slice(self.slots[pos].length - 13)
         });
@@ -393,6 +399,7 @@ function spyder() {
             }
             self.buff.push({
                 old: oldslot,
+                down: (self.slots[oldslot].length) ? last(self.slots[oldslot]).down : false,
                 op: 1,
                 arr: arr
             });
@@ -407,17 +414,18 @@ function spyder() {
             inc_mv();
             return;
         }
-        self.buff.push({
-            old: oldslot,
-            op: 1,
-            arr: arr
-        });
         for (i = 0; i < ret.length; i++) {
             if (ret[i][0] > max[0]) {
                 max = ret[i];
             }
         }
         max = max[1];
+        self.buff.push({
+            down: (self.slots[oldslot].length) ? last(self.slots[oldslot]).down : false,
+            old: oldslot,
+            op: 1,
+            arr: arr
+        });
         for (i = 0; i < arr.length; i++) {
             arr[i].slot = max;
             arr[i].style.zIndex = 106;
@@ -430,11 +438,25 @@ function spyder() {
     }
 
     this.body.addEventListener('contextmenu', function (evt) {
-        var c, i, arr;
         evt.preventDefault();
+        function end_suit(pos) {
+            var i, k = 0;
+            for (i = self.slots[pos].length - 1; i > 0; i--) {
+                if (self.slots[pos][i - 1].val - self.slots[pos][i].val === 1 && !self.slots[pos][i - 1].down) {
+                    k++;
+                } else {
+                    return k;
+                }
+            }
+            return k;
+        }
+
+        var c, i, arr;
         c = self.stock[parseInt(evt.target.id.substr(1))];
         if (c == null || c.down || c.slot > 9)return false;
-        arr = self.slots[c.slot].splice(self.slots[c.slot].indexOf(c));
+        //log('suit:',end_suit(c.slot));
+        //arr = self.slots[c.slot].splice(self.slots[c.slot].indexOf(c));
+        arr = self.slots[c.slot].splice(self.slots[c.slot].length - end_suit(c.slot) - 1);
         for (i = 0; i < arr.length - 1; i++) {
             if (arr[i].val - arr[i + 1].val != 1 || arr[i].down) {
                 self.slots[c.slot] = self.slots[c.slot].concat(arr);
@@ -445,8 +467,8 @@ function spyder() {
     }, false);
 
     this.body.addEventListener('mousedown', function (evt) {
-        var c, arr;
         evt.preventDefault();
+        var c, arr;
         if (evt.button != 0)return;
         c = self.stock[parseInt(evt.target.id.substr(1))];
         if (!c)return;
@@ -468,12 +490,13 @@ function spyder() {
                 crd.slot = i;
                 crd.style.zIndex = 105;
                 crd.anim({left: self.pos[i], top: last(self.slots[i]).offsetTop, delay: i * 100}, 400, function () {
-                    lay_even(z++);
+                    check(z++);
                 });
                 self.slots[i].push(crd);
                 arr.push(crd);
             }
             self.buff.push({
+                down: false,
                 old: 10,
                 op: 3,
                 arr: arr
@@ -533,6 +556,7 @@ function spyder() {
             }
         }
         self.buff.push({
+            down: (self.slots[self.move.slot].length) ? last(self.slots[self.move.slot]).down : false,
             old: self.move.suit[0].slot,
             op: 1,
             arr: self.move.suit
@@ -549,7 +573,7 @@ function spyder() {
 
         } else {
             self.slots[self.move.slot] = self.slots[self.move.slot].concat(self.move.suit);
-            lay_even(self.move.slot);
+            check(self.move.slot);
             player.play(document.getElementById('aerr'));
         }
         evt.preventDefault();
@@ -561,27 +585,30 @@ function spyder() {
         player.mute();
         document.getElementById('imute').className = (player.MUTE) ? 'unmute' : 'mute';
     }, false);
-    document.getElementById('undo').addEventListener('click', function () {
-        self.crs--;
+    this.undo.addEventListener('click', function () {
         var i;
-        if (self.crs < 0) {
-            self.crs = self.buff.length - 1;
+        if (self.buff.length === 0) {
+            this.classList.add('disabled');
+            return;
         }
-        if (self.buff.length === 0)return;
-        var o = self.buff[self.crs];
+        var o = self.buff.pop();
         player.play(document.getElementById('aundo'));
         if (o.op === 1) {
             var n = o.arr[0].slot;
             var arr = self.slots[n].splice(self.slots[n].indexOf(o.arr[0]));
+            if (o.down)last(self.slots[o.old]).back();
             for (i = 0; i < arr.length; i++) {
                 arr[i].slot = o.old;
                 self.slots[o.old].push(arr[i]);
             }
             lay_even(o.old);
             lay_even(n);
-            self.rbuff.push(self.buff.pop());
+            o.old = n;
+            self.rbuff.push(o);
+            self.redo.classList.remove('disabled');
         } else if (o.op === 3) {
             var c, k = parseInt(self.slots[10].length / 10) * 10;
+            if (o.down)last(self.slots[o.old]).back();
             for (i = 9; i > -1; --i) {
                 c = self.slots[i].pop();
                 c.back();
@@ -595,12 +622,56 @@ function spyder() {
                 });
                 lay_even(i);
             }
-            self.rbuff.push(self.buff.pop());
+            o.old = 10;
+            self.rbuff.push(o);
+            self.redo.classList.remove('disabled');
+        } else if (o.op === 2) {
+            var crd;
+            self.slots[o.old] = self.slots[o.old].concat(self.slots[11].splice(self.slots[11].length - 13));
+            for (i = 0; i < self.slots[o.old].length; i++) {
+                self.slots[o.old][i].slot = o.old;
+            }
+            this.click();
+            lay_even(o.old);
         }
+        if (self.buff.length === 0) this.classList.add('disabled');
     }, false);
     document.getElementById('redo').addEventListener('click', function () {
-
+        if (self.rbuff.length === 0) {
+            this.classList.add('disabled');
+            return;
+        }
+        var o = self.rbuff.pop();
+        if (o.op === 1) {
+            var n = o.arr[0].slot;
+            var arr = self.slots[n].splice(self.slots[n].indexOf(o.arr[0]));
+            last(self.slots[n]).up();
+            for (var i = 0; i < arr.length; i++) {
+                arr[i].slot = o.old;
+                self.slots[o.old].push(arr[i]);
+            }
+            check(o.old);
+            check(n);
+        } else if (o.op === 3) {
+            var crd, z = 0;
+            for (i = 0; i < 10; i++) {
+                crd = self.slots[10].pop();
+                crd.up();
+                crd.slot = i;
+                crd.style.zIndex = 105;
+                crd.anim({left: self.pos[i], top: last(self.slots[i]).offsetTop, delay: i * 200}, 400, function () {
+                    check(z++);
+                });
+                self.slots[i].push(crd);
+            }
+            self.buff = [];
+            self.rbuff = [];
+            self.undo.classList.add('disabled');
+            self.redo.classList.add('disabled');
+        }
+        if (self.rbuff.length === 0) this.classList.add('disabled');
     }, false);
+
     lay();
 }
 spyder();

@@ -184,10 +184,15 @@ body {
     content: '\e604';
 }
 
+.disabled {
+    background-color: #222 !important;
+    color: #555 !important;
+}
+
 hr {
     width: 80%;
     height: 0;
-    border:1px solid #000;
+    border: 1px solid #000;
     border-top: 1px solid #222;
     border-bottom: 1px solid #111;
 }
