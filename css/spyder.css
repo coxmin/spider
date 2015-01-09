@@ -5,6 +5,13 @@
     font-style: normal;
 }
 
+@font-face {
+    font-family: 'icon';
+    src: url('../res/icomoon.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
+
 html,
 body,
 main {
@@ -67,7 +74,12 @@ body {
 .c1 {
     width: 10%;
     height: 100%;
+    text-align: center;
     background: #000;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
 }
 
 .c2 {
@@ -119,16 +131,7 @@ body {
     cursor: pointer;
 }
 
-.card {
-    position: absolute;
-    width: 5em;
-    height: 7.5em;
-    cursor: pointer;
-    background-size: cover;
-    box-shadow: 0 0 1px #888;
-}
-
-#board, .icard, .card {
+#board, .icard {
     box-sizing: border-box;
     padding: 0;
     margin: 0;
@@ -145,6 +148,72 @@ body {
 
 .down {
     background: linear-gradient(120deg, #38f, #048, #024, #048, #38f) !important;
+}
+
+.undo, .redo, .mute, .reload, .sett, .unmute, .clip {
+    font-style: normal;
+    font-family: icon;
+    margin: 0 .2em;
+}
+
+.undo:before {
+    content: '\e600';
+}
+
+.redo:before {
+    content: '\e601';
+}
+
+.mute:before {
+    content: '\e606';
+}
+
+.unmute:before {
+    content: '\e605';
+}
+
+.reload:before {
+    content: '\e602';
+}
+
+.sett:before {
+    content: '\e603';
+}
+
+.clip:before {
+    content: '\e604';
+}
+
+hr {
+    width: 80%;
+    height: 0;
+    border:1px solid #000;
+    border-top: 1px solid #222;
+    border-bottom: 1px solid #111;
+}
+
+i.redo, i.undo {
+    display: inline-block;
+    margin: .4em;
+    padding: 2px;
+    border-radius: 1em;
+    box-shadow: 0 0 .5em 1px #789;
+}
+
+button {
+    background: #333;
+    color: #a8b2bc;
+    text-shadow: 1px 2px 0 #000;
+    width: 90%;
+    margin: .4em 0;
+    border: 1px solid #000;
+    border-radius: .2em;
+    box-shadow: 0 0 .5em #777;
+}
+
+button:hover {
+    box-shadow: 0 0 .8em #bdf;
+    color: #bdf;
 }
 
 /*-----------------------------------------------*/

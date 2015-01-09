@@ -10,7 +10,23 @@ function easeInOutQuad(t) {
     return t < .5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 }
 
+function shuffle(arr) {
+    var ret = arr.splice(0);
+    var l = ret.length;
+    for (var i = 0; i < l; i++) {
+        arr.push(ret.splice(Math.floor(Math.random() * ret.length), 1)[0]);
+    }
+}
 
+function last(arr) {
+    return arr[arr.length - 1];
+}
+
+function setId(arr) {
+    for (var i = 0; i < arr.length; i++) {
+        arr[i].id = 'q' + i;
+    }
+}
 //Element.prototype.remove = function () {
 //    this.parentElement.removeChild(this);
 //};
@@ -177,25 +193,6 @@ var player = new Player();
 
 
 function spyder() {
-
-    function shuffle(arr) {
-        var ret = arr.splice(0);
-        var l = ret.length;
-        for (var i = 0; i < l; i++) {
-            arr.push(ret.splice(Math.floor(Math.random() * ret.length), 1)[0]);
-        }
-    }
-
-    function last(arr) {
-        return arr[arr.length - 1];
-    }
-
-    function setId(arr) {
-        for (var i = 0; i < arr.length; i++) {
-            arr[i].id = 'q' + i;
-        }
-    }
-
     function card(val) {
         var e = document.createElement('div');
         e.className = 'icard down';
@@ -253,6 +250,9 @@ function spyder() {
         self.slots = [];
         self.pos = [];
         self.nomv = -1;
+        self.buff = [];
+        self.rbuff = [];
+        self.crs = -1;
         inc_mv();
         k = 0;
         sp = (self.body.offsetWidth - self.stock[0].offsetWidth) / 9;
@@ -279,13 +279,13 @@ function spyder() {
             self.stock[i].slot = 10;
             self.stock[i].back();
             self.slots[10].push(self.stock[i]);
-            self.stock[i].xy(self.body.offsetWidth - self.stock[0].offsetWidth - k, self.body.offsetHeight - self.stock[0].offsetHeight, i - 53);
+            self.stock[i].xy(self.body.offsetWidth - self.stock[0].offsetWidth - k, self.body.offsetHeight - self.stock[0].offsetHeight, k / 10 + 1);
         }
         for (i = 0; i < 10; i++) {
             lay_even(i);
         }
         self.TIME = new Date;
-        self.timee = document.getElementById('msg');
+        self.timee = document.getElementById('time');
         self.time = setInterval(function () {
             self.timee.innerHTML = parseInt((new Date - self.TIME) / 1000) + ' s';
         }, 1000);
@@ -328,6 +328,10 @@ function spyder() {
             }
         }
 
+        self.buff.push({
+            op: 2,
+            arr: self.slots[pos].slice(self.slots[pos].length - 13)
+        });
         player.play(document.getElementById('adown'));
         yy = self.slots[pos][self.slots[pos].length - 13].offsetTop + 20;
         for (i = arr.length - 1; i >= arr.length - 13; --i) {
@@ -373,31 +377,41 @@ function spyder() {
 
         for (i = 0; i < 10; i++) {
             if (i === oldslot) continue;
-            if (this.slots[i].length === 0) {
+            if (self.slots[i].length === 0) {
                 empty = i;
                 continue;
             }
-            if (last(this.slots[i]).val - arr[0].val === 1) {
+            if (last(self.slots[i]).val - arr[0].val === 1) {
                 ret.push([end_suit(i), i]);
             }
         }
         if (ret.length === 0) {
             if (empty == null) {
-                this.slots[oldslot] = this.slots[oldslot].concat(arr);
+                self.slots[oldslot] = self.slots[oldslot].concat(arr);
                 player.play(self.aclick);
                 return;
             }
+            self.buff.push({
+                old: oldslot,
+                op: 1,
+                arr: arr
+            });
             for (i = 0; i < arr.length; i++) {
                 arr[i].slot = empty;
                 arr[i].style.zIndex = 106;
             }
-            this.slots[empty] = this.slots[empty].concat(arr);
-            if (this.slots[oldslot].length > 0) last(this.slots[oldslot]).up();
+            self.slots[empty] = self.slots[empty].concat(arr);
+            if (self.slots[oldslot].length > 0) last(self.slots[oldslot]).up();
             lay_even(empty);
             player.play(document.getElementById('aoven'));
             inc_mv();
             return;
         }
+        self.buff.push({
+            old: oldslot,
+            op: 1,
+            arr: arr
+        });
         for (i = 0; i < ret.length; i++) {
             if (ret[i][0] > max[0]) {
                 max = ret[i];
@@ -408,17 +422,13 @@ function spyder() {
             arr[i].slot = max;
             arr[i].style.zIndex = 106;
         }
-        this.slots[max] = this.slots[max].concat(arr);
-        if (this.slots[oldslot].length > 0) last(this.slots[oldslot]).up();
+        self.slots[max] = self.slots[max].concat(arr);
+        if (self.slots[oldslot].length > 0) last(self.slots[oldslot]).up();
         player.play(document.getElementById('aoven'));
         check(max);
         inc_mv();
     }
 
-    this.body.addEventListener('dblclick', function (evt) {
-        evt.preventDefault();
-        return false;
-    }, false);
     this.body.addEventListener('contextmenu', function (evt) {
         var c, i, arr;
         evt.preventDefault();
@@ -451,6 +461,7 @@ function spyder() {
             }
             var crd, z = 0;
             player.play(document.getElementById('aoven'));
+            arr = [];
             for (i = 0; i < 10; i++) {
                 crd = self.slots[10].pop();
                 crd.up();
@@ -460,7 +471,13 @@ function spyder() {
                     lay_even(z++);
                 });
                 self.slots[i].push(crd);
+                arr.push(crd);
             }
+            self.buff.push({
+                old: 10,
+                op: 3,
+                arr: arr
+            });
             return;
         }
         player.play(self.aclick);
@@ -515,7 +532,11 @@ function spyder() {
                 pos = i;
             }
         }
-
+        self.buff.push({
+            old: self.move.suit[0].slot,
+            op: 1,
+            arr: self.move.suit
+        });
         if (self.slots[pos].length === 0 || last(self.slots[pos]).val - self.move.suit[0].val === 1) {
             self.slots[pos] = self.slots[pos].concat(self.move.suit);
             for (i = 0; i < self.slots[pos].length; i++) {
@@ -538,6 +559,47 @@ function spyder() {
     }, false);
     document.getElementById('mute').addEventListener('click', function () {
         player.mute();
+        document.getElementById('imute').className = (player.MUTE) ? 'unmute' : 'mute';
+    }, false);
+    document.getElementById('undo').addEventListener('click', function () {
+        self.crs--;
+        var i;
+        if (self.crs < 0) {
+            self.crs = self.buff.length - 1;
+        }
+        if (self.buff.length === 0)return;
+        var o = self.buff[self.crs];
+        player.play(document.getElementById('aundo'));
+        if (o.op === 1) {
+            var n = o.arr[0].slot;
+            var arr = self.slots[n].splice(self.slots[n].indexOf(o.arr[0]));
+            for (i = 0; i < arr.length; i++) {
+                arr[i].slot = o.old;
+                self.slots[o.old].push(arr[i]);
+            }
+            lay_even(o.old);
+            lay_even(n);
+            self.rbuff.push(self.buff.pop());
+        } else if (o.op === 3) {
+            var c, k = parseInt(self.slots[10].length / 10) * 10;
+            for (i = 9; i > -1; --i) {
+                c = self.slots[i].pop();
+                c.back();
+                c.slot = 10;
+                c.zix();
+                self.slots[10].push(c);
+                c.anim({
+                    left: self.body.offsetWidth - self.stock[0].offsetWidth - k,
+                    top: self.body.offsetHeight - self.stock[0].offsetHeight,
+                    z: k / 10 + 1
+                });
+                lay_even(i);
+            }
+            self.rbuff.push(self.buff.pop());
+        }
+    }, false);
+    document.getElementById('redo').addEventListener('click', function () {
+
     }, false);
     lay();
 }
