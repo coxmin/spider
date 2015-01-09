@@ -539,12 +539,6 @@ function spyder() {
     document.getElementById('mute').addEventListener('click', function () {
         player.mute();
     }, false);
-    document.getElementById('test').addEventListener('click', function () {
-        self.msg.message('qqqqqqqqqqqqqqq', 'wwwwwww');
-    }, false);
-
     lay();
-    self.msg.message(self.body.offsetHeight / 25, 'test');
 }
-
 spyder();
