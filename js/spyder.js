@@ -356,14 +356,34 @@ function spyder() {
                 return;
             }
         }
-        x = self.stock[0].x;
-        y = self.stock[0].y;
+        x = self.stock[0].offsetWidth;
+        y = self.stock[0].offsetHeight;
         player.play(document.getElementById('awin'));
-        clearInterval(self.time);
-        self.stock[0].anim({left: x, top: y, delay: 400}, 400, function () {
-            player.play(document.getElementById('awin'));
-        });
         self.msg.message('Mutări: ' + self.nomv + '<br>Timp: ' + self.timee.innerHTML, 'Felicitări!');
+        clearInterval(self.time);
+        setTimeout(function(){
+            player.play(document.getElementById('awin'));
+            setTimeout(function(){
+                player.play(document.getElementById('awin'));
+            },2000);
+        },2000);
+        for (i = 0; i < self.stock.length; i++) {
+            x = Math.random() * self.body.offsetWidth;
+            y = Math.random() * self.body.offsetHeight;
+            self.stock[i].anim({left: x, top: y, delay: 100 * i}, 200);
+        }
+    }
+
+    function test() {
+        var x, y, i;
+        self.msg.message('Mutări: ' + self.nomv + '<br>Timp: ' + self.timee.innerHTML, 'Felicitări!');
+
+        clearInterval(self.time);
+        for (i = 0; i < self.stock.length; i++) {
+            x = Math.random() * self.body.offsetWidth;
+            y = Math.random() * self.body.offsetHeight;
+            self.stock[i].anim({left: x, top: y, delay: 100 * i}, 200);
+        }
     }
 
     function find_place(arr) {
@@ -671,6 +691,9 @@ function spyder() {
             self.redo.classList.add('disabled');
         }
         if (self.rbuff.length === 0) this.classList.add('disabled');
+    }, false);
+    document.getElementById('test').addEventListener('click', function () {
+        test();
     }, false);
 
     lay();
