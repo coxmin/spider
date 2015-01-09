@@ -359,10 +359,11 @@ function spyder() {
         x = self.stock[0].x;
         y = self.stock[0].y;
         player.play(document.getElementById('awin'));
+        clearInterval(self.time);
         self.stock[0].anim({left: x, top: y, delay: 400}, 400, function () {
             player.play(document.getElementById('awin'));
         });
-        self.msg.message('Ai câștigat!', 'Felicitări');
+        self.msg.message('Mutări: ' + self.nomv + '<br>Timp: ' + self.timee.innerHTML, 'Felicitări!');
     }
 
     function find_place(arr) {
